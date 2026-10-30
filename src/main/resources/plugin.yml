@@ -1,0 +1,21 @@
+name: AirPen
+version: ${version}
+main: net.azisaba.airpen.AirPenPlugin
+api-version: '1.21'
+description: Draw lines in the air with a pen item, VRChat style.
+depend: [ProtocolLib]
+
+commands:
+  airpen:
+    description: AirPen command
+    usage: /airpen <give|clear|debug|reload|calibrate|cleanup|inspect>
+
+permissions:
+  airpen.admin:
+    description: Give pens, clear other players' drawings, reload config, diagnostics
+    default: op
+    children:
+      airpen.unlimited: true
+  airpen.unlimited:
+    description: Draw without an ink limit
+    default: op
