@@ -1,6 +1,6 @@
 # AirPen
 
-VRChat のペンのように、空中に線を描けるプラグイン(Paper 1.21.11 / 前提: ProtocolLib)。
+空中に線を描けるプラグイン(Paper 1.21.11 / 前提: ProtocolLib)。
 
 ## 使い方
 
