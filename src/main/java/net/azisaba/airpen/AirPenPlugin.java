@@ -166,6 +166,7 @@ public final class AirPenPlugin extends JavaPlugin implements TabExecutor {
                 sender.sendMessage(Component.text("迷子のエンティティを削除しました: インク " + removed[0] + " 個 / メニュー " + removed[1] + " 個", NamedTextColor.GREEN));
             }
             case "debug" -> {
+                if (!sender.hasPermission("airpen.admin")) return deny(sender);
                 if (sender instanceof Player p) {
                     boolean on = controller.toggleDebug(p);
                     sender.sendMessage(Component.text("AirPen デバッグ表示: " + (on ? "ON" : "OFF"), NamedTextColor.YELLOW));
@@ -219,7 +220,7 @@ public final class AirPenPlugin extends JavaPlugin implements TabExecutor {
         boolean admin = sender.hasPermission("airpen.admin");
         if (args.length == 1) {
             Stream<String> subs = admin ? Stream.of("give", "clear", "reload", "calibrate", "debug", "cleanup", "inspect")
-                    : Stream.of("clear", "debug");
+                    : Stream.of("clear");
             return subs.filter(s -> s.startsWith(args[0].toLowerCase())).toList();
         }
         if (args.length == 2 && admin && !args[0].equalsIgnoreCase("reload")) {
