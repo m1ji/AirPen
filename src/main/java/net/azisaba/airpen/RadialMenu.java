@@ -45,12 +45,13 @@ public final class RadialMenu implements PenMenu {
     private int hovered = NONE;
     private final long openedAt = System.currentTimeMillis();
 
-    public RadialMenu(@NotNull AirPenPlugin plugin, @NotNull Player player, @NotNull Component title, @NotNull List<Entry> entries) {
+    /** {@code origin}: eye position and direction the menu is laid out from; a submenu gets its parent's so it opens in the same place. */
+    public RadialMenu(@NotNull AirPenPlugin plugin, @NotNull Player player, @NotNull Location origin, @NotNull Component title, @NotNull List<Entry> entries) {
         this.plugin = plugin;
         this.player = player;
         this.entries = List.copyOf(entries);
         AirPenConfig config = plugin.config();
-        Location eye = player.getEyeLocation();
+        Location eye = origin.clone();
         this.normal = eye.getDirection().normalize();
         Vector worldUp = new Vector(0, 1, 0);
         Vector r = normal.clone().crossProduct(worldUp);

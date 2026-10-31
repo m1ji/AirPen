@@ -61,6 +61,7 @@ public final class PenController implements Listener {
     private final NamespacedKey keyWidth;
     private final NamespacedKey keyWidthValue;
     private final NamespacedKey keyVisible;
+    private final NamespacedKey keyDistance;
     private final List<BukkitTask> tasks = new ArrayList<>();
 
     public PenController(@NotNull AirPenPlugin plugin) {
@@ -73,6 +74,7 @@ public final class PenController implements Listener {
         this.keyWidth = new NamespacedKey(plugin, "width");
         this.keyWidthValue = new NamespacedKey(plugin, "width-value");
         this.keyVisible = new NamespacedKey(plugin, "visible");
+        this.keyDistance = new NamespacedKey(plugin, "distance");
     }
 
     public void start() {
@@ -154,7 +156,7 @@ public final class PenController implements Listener {
             session.waitRightRelease = rightHeld;
             return;
         }
-        tickDrawing(player, session, tip(player), rightHeld, now);
+        tickDrawing(player, session, tip(player, session), rightHeld, now);
     }
 
     private void tickDrawing(Player player, PenSession session, Vector tip, boolean rightHeld, long now) {
@@ -336,11 +338,15 @@ public final class PenController implements Listener {
         return plugin.pen().isPen(item);
     }
 
-    /** Pen tip: a fixed distance in front of the eyes, or just in front of the first block in the way. */
-    private Vector tip(Player player) {
+    /** Pen tip: the player's chosen distance in front of the eyes, or just in front of the first block in the way. */
+    private Vector tip(Player player, PenSession session) {
+        return tipAt(player, distance(session));
+    }
+
+    /** Pen tip for a given distance (also previewed by the distance menu). */
+    public static @NotNull Vector tipAt(@NotNull Player player, double distance) {
         Location eye = player.getEyeLocation();
         Vector dir = eye.getDirection().normalize();
-        double distance = plugin.config().distance();
         RayTraceResult hit = player.getWorld().rayTraceBlocks(eye, dir, distance, FluidCollisionMode.NEVER, true);
         if (hit != null) return hit.getHitPosition().subtract(dir.multiply(0.03));
         return eye.toVector().add(dir.multiply(distance));
@@ -387,11 +393,15 @@ public final class PenController implements Listener {
     }
 
     private RadialMenu mainMenu(Player player, PenSession session) {
+        // Submenus open where this one is, not wherever the gaze ended up when picking an entry
+        Location origin = player.getEyeLocation();
         List<RadialMenu.Entry> entries = new ArrayList<>();
         entries.add(new RadialMenu.Entry(RadialMenu.swatch(session.color, "色"),
-                () -> session.menu = colorMenu(player, session)));
+                () -> session.menu = colorMenu(player, session, origin)));
         entries.add(new RadialMenu.Entry(Component.text("太さ: " + widthLabel(session), NamedTextColor.WHITE),
-                () -> session.menu = widthMenu(player, session)));
+                () -> session.menu = widthMenu(player, session, origin)));
+        entries.add(new RadialMenu.Entry(Component.text("描く位置: " + DistanceMenu.format(distance(session)), NamedTextColor.WHITE),
+                () -> session.menu = distanceMenu(player, session, origin)));
         entries.add(new RadialMenu.Entry(onOff("消しゴム", session.eraser), () -> {
             session.eraser = !session.eraser;
             player.sendActionBar(onOff("消しゴム", session.eraser));
@@ -413,10 +423,10 @@ public final class PenController implements Listener {
             strokes.refreshVisibility(player.getUniqueId());
             player.sendActionBar(onOff("他の人に見せる", session.visibleToOthers));
         }));
-        return new RadialMenu(plugin, player, Component.text("AirPen", NamedTextColor.GOLD), entries);
+        return new RadialMenu(plugin, player, origin, Component.text("AirPen", NamedTextColor.GOLD), entries);
     }
 
-    private RadialMenu colorMenu(Player player, PenSession session) {
+    private RadialMenu colorMenu(Player player, PenSession session, Location origin) {
         List<RadialMenu.Entry> entries = new ArrayList<>();
         for (AirPenConfig.NamedValue<Integer> color : plugin.config().colors()) {
             entries.add(new RadialMenu.Entry(RadialMenu.swatch(color.value(), color.name()), () -> setColor(player, session, color.value())));
@@ -425,15 +435,24 @@ public final class PenController implements Listener {
             session.awaitingColorUntil = System.currentTimeMillis() + 30_000;
             player.sendMessage(Component.text("チャットにカラーコード(例: #FF8800)を入力してください。「cancel」で中止します。", NamedTextColor.AQUA));
         }));
-        return new RadialMenu(plugin, player, Component.text("色", NamedTextColor.GOLD), entries);
+        return new RadialMenu(plugin, player, origin, Component.text("色", NamedTextColor.GOLD), entries);
     }
 
-    private PenMenu widthMenu(Player player, PenSession session) {
+    private PenMenu widthMenu(Player player, PenSession session, Location origin) {
         AirPenConfig config = plugin.config();
-        return new SliderMenu(plugin, player, width(session), config.widthMin(), config.widthMax(), session.color, value -> {
+        return new SliderMenu(plugin, player, origin, width(session), config.widthMin(), config.widthMax(), session.color, value -> {
             session.width = value;
             save(player, session);
             player.sendActionBar(Component.text("太さ: " + widthLabel(session), NamedTextColor.GRAY));
+        });
+    }
+
+    private PenMenu distanceMenu(Player player, PenSession session, Location origin) {
+        AirPenConfig config = plugin.config();
+        return new DistanceMenu(plugin, player, origin, distance(session), config.distanceMin(), config.distanceMax(), value -> {
+            session.distance = value;
+            save(player, session);
+            player.sendActionBar(Component.text("描く位置: " + DistanceMenu.format(value) + " ブロック先", NamedTextColor.GRAY));
         });
     }
 
@@ -454,6 +473,13 @@ public final class PenController implements Listener {
         return Math.max(config.widthMin(), Math.min(config.widthMax(), session.width));
     }
 
+    /** Eye-to-tip distance chosen by the player, kept inside the configured range. */
+    private double distance(PenSession session) {
+        AirPenConfig config = plugin.config();
+        double chosen = Double.isNaN(session.distance) ? config.distance() : session.distance;
+        return Math.max(config.distanceMin(), Math.min(config.distanceMax(), chosen));
+    }
+
     /** Players see the width as a whole number: hundredths of a block. */
     private String widthLabel(PenSession session) {
         return String.valueOf(SliderMenu.toLevel(width(session)));
@@ -467,6 +493,7 @@ public final class PenController implements Listener {
         session.color = pdc.getOrDefault(keyColor, PersistentDataType.INTEGER, plugin.config().colors().get(0).value());
         session.width = loadWidth(pdc);
         session.visibleToOthers = pdc.getOrDefault(keyVisible, PersistentDataType.BYTE, (byte) 0) == 1;
+        session.distance = pdc.getOrDefault(keyDistance, PersistentDataType.DOUBLE, Double.NaN);
         sessions.put(player.getUniqueId(), session);
     }
 
@@ -485,6 +512,7 @@ public final class PenController implements Listener {
         pdc.set(keyColor, PersistentDataType.INTEGER, session.color);
         pdc.set(keyWidthValue, PersistentDataType.FLOAT, session.width);
         pdc.set(keyVisible, PersistentDataType.BYTE, (byte) (session.visibleToOthers ? 1 : 0));
+        if (!Double.isNaN(session.distance)) pdc.set(keyDistance, PersistentDataType.DOUBLE, session.distance);
     }
 
     @EventHandler

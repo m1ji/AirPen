@@ -19,7 +19,7 @@ import java.util.function.Consumer;
 
 /**
  * Width picker: a horizontal bar in front of the player. Looking along the bar picks the width, shown as a dot of
- * exactly that size in the current color; letting go applies it, letting go while looking away from the bar cancels.
+ * exactly that size in the current color; left-click applies it, left-click while looking away from the bar cancels.
  * Widths are whole "levels" (hundredths of a block) on a logarithmic bar, so thin widths get more room.
  */
 public final class SliderMenu implements PenMenu {
@@ -60,7 +60,8 @@ public final class SliderMenu implements PenMenu {
     private int hovered;
     private int shownLevel = -2;
 
-    public SliderMenu(@NotNull AirPenPlugin plugin, @NotNull Player player, float current, float min, float max,
+    /** {@code origin}: eye position and direction the menu is laid out from; a submenu gets its parent's so it opens in the same place. */
+    public SliderMenu(@NotNull AirPenPlugin plugin, @NotNull Player player, @NotNull Location origin, float current, float min, float max,
                       int color, @NotNull Consumer<Float> onSet) {
         this.plugin = plugin;
         this.player = player;
@@ -70,7 +71,7 @@ public final class SliderMenu implements PenMenu {
         this.color = color;
         this.onSet = onSet;
         AirPenConfig config = plugin.config();
-        Location eye = player.getEyeLocation();
+        Location eye = origin.clone();
         this.normal = eye.getDirection().normalize();
         Vector r = normal.clone().crossProduct(new Vector(0, 1, 0));
         if (r.lengthSquared() < 1e-6) r = new Vector(1, 0, 0);
@@ -88,7 +89,7 @@ public final class SliderMenu implements PenMenu {
         parts.add(label(at(0, 0.45), Component.text("太さ", NamedTextColor.GOLD), 0.4f * S));
         parts.add(label(at(-HALF_LENGTH / S, -0.13), Component.text(String.valueOf(minLevel), NamedTextColor.GRAY), 0.3f * S));
         parts.add(label(at(HALF_LENGTH / S, -0.13), Component.text(String.valueOf(maxLevel), NamedTextColor.GRAY), 0.3f * S));
-        parts.add(label(at(0, -0.66), Component.text("左右で調整して離すと決定 / バーから外して離すとキャンセル", NamedTextColor.GRAY), 0.25f * S));
+        parts.add(label(at(0, -0.66), Component.text("左右で調整して左クリックで決定 / バーから外して左クリックでキャンセル", NamedTextColor.GRAY), 0.25f * S));
         value = label(at(0, 0.24), Component.empty(), 0.4f * S);
         parts.add(value);
 

@@ -9,6 +9,8 @@ public final class PenSession {
     // settings (saved in the player's persistent data)
     int color = 0xF0F0F0;
     float width = 0.04f;
+    /** Eye-to-tip distance; NaN = not chosen yet, follow the server default. */
+    double distance = Double.NaN;
     boolean eraser;
     boolean visibleToOthers;
 

@@ -16,6 +16,9 @@ public record AirPenConfig(
         List<String> penLore,
         int penModelData,
         double distance,
+        /** Range each player can pick their own distance in (distance menu). */
+        double distanceMin,
+        double distanceMax,
         double minStep,
         double mergeAngleDeg,
         double maxSegmentLength,
@@ -83,12 +86,16 @@ public record AirPenConfig(
 
         ConfigurationSection d = c.getConfigurationSection("drawing");
         if (d == null) d = c.createSection("drawing");
+        double distanceMin = clamp(d.getDouble("distance-min", 0.5), 0.3, 4.2);
+        double distanceMax = clamp(d.getDouble("distance-max", 3.0), distanceMin + 0.1, 4.3);
         return new AirPenConfig(
                 material,
                 c.getString("pen.name", "<gold>エアペン"),
                 c.getStringList("pen.lore"),
                 c.getInt("pen.custom-model-data", 0),
-                clamp(d.getDouble("distance", 2.0), 1.0, 4.3),
+                clamp(d.getDouble("distance", 2.0), distanceMin, distanceMax),
+                distanceMin,
+                distanceMax,
                 Math.max(0.01, d.getDouble("min-step", 0.03)),
                 d.getDouble("merge-angle", 4.0),
                 Math.max(0.2, d.getDouble("max-segment-length", 4.0)),
