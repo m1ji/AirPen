@@ -2,7 +2,7 @@ name: AirPen
 version: ${version}
 main: net.azisaba.airpen.AirPenPlugin
 api-version: '1.21'
-description: Draw lines in the air with a pen item, VRChat style.
+description: Draw lines in the air with a pen item.
 depend: [ProtocolLib]
 
 commands:
